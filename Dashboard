@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# =============================================================
+# deploy.sh — Upload Landscape Forms Dashboard to GitHub Pages
+# =============================================================
+# USAGE:
+#   1. Set your GitHub username and desired repo name below
+#   2. Create the repo on GitHub first (github.com/new) — keep
+#      it empty, do NOT add a README or .gitignore
+#   3. Run:  bash deploy.sh
+#
+# The script will:
+#   • Initialise a local git repo in this folder
+#   • Add index.html and all assets
+#   • Create a gh-pages branch (GitHub Pages source)
+#   • Push to GitHub
+#   • Print your live URL when done
+# =============================================================
+
+set -e   # exit immediately on any error
+
+# ── CONFIG — EDIT THESE TWO LINES ────────────────────────────
+GITHUB_USERNAME="YOUR_GITHUB_USERNAME"
+REPO_NAME="landscape-forms-dashboard"
+# ─────────────────────────────────────────────────────────────
+
+# Derived values
+REMOTE_URL="https://github.com/${GITHUB_USERNAME}/${REPO_NAME}.git"
+LIVE_URL="https://${GITHUB_USERNAME}.github.io/${REPO_NAME}/"
+
+echo ""
+echo "╔══════════════════════════════════════════════════════╗"
+echo "║  Landscape Forms Dashboard — GitHub Pages Deploy     ║"
+echo "╚══════════════════════════════════════════════════════╝"
+echo ""
+
+# ── PREFLIGHT CHECKS ─────────────────────────────────────────
+if [ "$GITHUB_USERNAME" = "YOUR_GITHUB_USERNAME" ]; then
+  echo "❌  ERROR: Edit deploy.sh and set your GITHUB_USERNAME before running."
+  exit 1
+fi
+
+if ! command -v git &> /dev/null; then
+  echo "❌  ERROR: git is not installed. Install it from https://git-scm.com"
+  exit 1
+fi
+
+echo "→  Repository : ${REMOTE_URL}"
+echo "→  Live URL   : ${LIVE_URL}"
+echo ""
+
+# ── INITIALISE LOCAL REPO ────────────────────────────────────
+echo "▶  Initialising local git repository..."
+
+if [ ! -d ".git" ]; then
+  git init
+  echo "   ✓ git init done"
+else
+  echo "   ℹ  .git already exists — skipping init"
+fi
+
+# ── CONFIGURE GIT (only if not already set) ──────────────────
+if [ -z "$(git config --global user.email 2>/dev/null)" ]; then
+  echo ""
+  read -rp "   Enter your GitHub email address: " GIT_EMAIL
+  git config --global user.email "$GIT_EMAIL"
+fi
+if [ -z "$(git config --global user.name 2>/dev/null)" ]; then
+  read -rp "   Enter your full name for git commits: " GIT_NAME
+  git config --global user.name "$GIT_NAME"
+fi
+
+# ── CREATE / SWITCH TO gh-pages BRANCH ───────────────────────
+echo ""
+echo "▶  Setting up gh-pages branch..."
+
+if git show-ref --quiet refs/heads/gh-pages; then
+  git checkout gh-pages
+  echo "   ✓ Switched to existing gh-pages branch"
+else
+  git checkout -b gh-pages
+  echo "   ✓ Created new gh-pages branch"
+fi
+
+# ── STAGE ALL FILES ──────────────────────────────────────────
+echo ""
+echo "▶  Staging files..."
+git add -A
+echo "   ✓ All files staged"
+
+# Count staged files
+STAGED=$(git diff --cached --name-only | wc -l | tr -d ' ')
+echo "   ✓ ${STAGED} file(s) ready to commit"
+
+# ── COMMIT ───────────────────────────────────────────────────
+echo ""
+echo "▶  Creating commit..."
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+git commit -m "Deploy Landscape Forms Talent Review Dashboard — ${TIMESTAMP}" \
+  --allow-empty
+echo "   ✓ Commit created"
+
+# ── SET REMOTE ───────────────────────────────────────────────
+echo ""
+echo "▶  Configuring remote origin..."
+
+if git remote get-url origin &>/dev/null; then
+  git remote set-url origin "$REMOTE_URL"
+  echo "   ✓ Remote updated to ${REMOTE_URL}"
+else
+  git remote add origin "$REMOTE_URL"
+  echo "   ✓ Remote added: ${REMOTE_URL}"
+fi
+
+# ── PUSH ─────────────────────────────────────────────────────
+echo ""
+echo "▶  Pushing to GitHub..."
+echo "   (You may be prompted for your GitHub credentials."
+echo "    Use a Personal Access Token as the password."
+echo "    Generate one at: https://github.com/settings/tokens)"
+echo ""
+
+git push -u origin gh-pages --force
+
+# ── ENABLE GITHUB PAGES (instructions) ───────────────────────
+echo ""
+echo "╔══════════════════════════════════════════════════════╗"
+echo "║  ✅  Push complete!                                  ║"
+echo "╚══════════════════════════════════════════════════════╝"
+echo ""
+echo "  NEXT STEP — Enable GitHub Pages:"
+echo ""
+echo "  1. Go to: https://github.com/${GITHUB_USERNAME}/${REPO_NAME}/settings/pages"
+echo "  2. Under 'Source', select:"
+echo "       Branch: gh-pages   /   Folder: / (root)"
+echo "  3. Click Save"
+echo ""
+echo "  Your dashboard will be live at:"
+echo ""
+echo "  🌐  ${LIVE_URL}"
+echo ""
+echo "  (GitHub Pages usually goes live within 1–2 minutes)"
+echo ""
